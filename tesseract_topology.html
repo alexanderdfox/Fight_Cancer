@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Tesseract Topology Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+        }
+
+        .main-view {
+            flex: 1;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+        }
+
+        button.secondary:hover {
+            box-shadow: 0 6px 16px rgba(245, 87, 108, 0.4);
+        }
+
+        button.tertiary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+        }
+
+        button.tertiary:hover {
+            box-shadow: 0 6px 16px rgba(79, 172, 254, 0.4);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .value-display {
+            font-size: 13px;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .info-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #666;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .rotate-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+            margin: 20px 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>🔮 Tesseract Topology</h1>
+            <p class="subtitle">Interactive 4D hypercube visualization with topology-changing operations</p>
+
+            <div class="section">
+                <div class="section-title">Statistics</div>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="stat-label">Vertices:</span>
+                        <span class="stat-value" id="vertexCount">16</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Edges:</span>
+                        <span class="stat-value" id="edgeCount">32</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Faces:</span>
+                        <span class="stat-value" id="faceCount">24</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Cells:</span>
+                        <span class="stat-value" id="cellCount">8</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-title">Topology Operations</div>
+                <button onclick="collapseRandomEdge()">🔄 Collapse Random Edge</button>
+                <button onclick="subdivideRandomCell()" class="secondary">➕ Subdivide Random Cell</button>
+                <button onclick="createDual()" class="tertiary">🔀 Create Dual Complex</button>
+                <button onclick="rewireEdges()">🌀 Rewire Edges</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-title">Visualization</div>
+                <div class="input-group">
+                    <label for="rotationSpeed">4D Rotation Speed</label>
+                    <div class="value-display"><span id="rotationSpeedValue">0.003</span></div>
+                    <input type="range" id="rotationSpeed" min="0" max="0.01" step="0.001" value="0.003" 
+                           oninput="updateRotationSpeed(this.value)">
+                </div>
+                <div class="input-group">
+                    <label for="edgeOpacity">Edge Opacity</label>
+                    <div class="value-display"><span id="edgeOpacityValue">0.6</span></div>
+                    <input type="range" id="edgeOpacity" min="0" max="1" step="0.1" value="0.6" 
+                           oninput="updateEdgeOpacity(this.value)">
+                </div>
+                <div class="input-group">
+                    <label for="rewireProb">Rewire Probability</label>
+                    <div class="value-display"><span id="rewireProbValue">0.20</span></div>
+                    <input type="range" id="rewireProb" min="0" max="1" step="0.05" value="0.20" 
+                           oninput="updateRewireProb(this.value)">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <button onclick="resetTesseract()" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    🔄 Reset to Original
+                </button>
+            </div>
+        </div>
+
+        <div class="main-view">
+            <canvas id="canvas"></canvas>
+            <div class="info-overlay">
+                <strong>Current View:</strong> 3D Projection of 4D Tesseract
+            </div>
+            <div class="rotate-hint">
+                🖱️ Click and drag to rotate • Scroll to zoom
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tesseract data structure
+        let vertices = [];
+        let edges = [];
+        let faces = [];
+        let cells = [];
+        
+        // Canvas and rendering
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Camera and interaction
+        let angleX = 0.3;
+        let angleY = 0.5;
+        let angleZ = 0.2;
+        let angle4D = 0;
+        let rotationSpeed = 0.003;
+        let edgeOpacity = 0.6;
+        let rewireProb = 0.20;
+        let zoom = 200;
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        // Resize canvas to fill container
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ===========================
+        // Tesseract Construction
+        // ===========================
+
+        function buildUnitTesseract(center = [0, 0, 0, 0], size = 1.0) {
+            const sx = size / 2.0;
+            vertices = [];
+            
+            // Generate 16 vertices (2^4 combinations)
+            for (let w = 0; w <= 1; w++) {
+                for (let z = 0; z <= 1; z++) {
+                    for (let y = 0; y <= 1; y++) {
+                        for (let x = 0; x <= 1; x++) {
+                            vertices.push([
+                                (x === 0 ? -sx : sx) + center[0],
+                                (y === 0 ? -sx : sx) + center[1],
+                                (z === 0 ? -sx : sx) + center[2],
+                                (w === 0 ? -sx : sx) + center[3]
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+            // Generate edges (connect vertices differing by exactly 1 bit)
+            edges = [];
+            for (let i = 0; i < 16; i++) {
+                for (let j = i + 1; j < 16; j++) {
+                    if (hammingDistance(i, j) === 1) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+            
+            // Generate faces (squares where 2 axes vary)
+            faces = [];
+            const axes = [0, 1, 2, 3];
+            for (let fixed1 = 0; fixed1 < 4; fixed1++) {
+                for (let fixed2 = fixed1 + 1; fixed2 < 4; fixed2++) {
+                    const varyAxes = axes.filter(a => a !== fixed1 && a !== fixed2);
+                    for (let f1 = 0; f1 <= 1; f1++) {
+                        for (let f2 = 0; f2 <= 1; f2++) {
+                            const face = [];
+                            for (let v1 = 0; v1 <= 1; v1++) {
+                                for (let v2 = 0; v2 <= 1; v2++) {
+                                    const bits = [0, 0, 0, 0];
+                                    bits[fixed1] = f1;
+                                    bits[fixed2] = f2;
+                                    bits[varyAxes[0]] = v1;
+                                    bits[varyAxes[1]] = v2;
+                                    const idx = bits[0] + bits[1] * 2 + bits[2] * 4 + bits[3] * 8;
+                                    face.push(idx);
+                                }
+                            }
+                            faces.push(face);
+                        }
+                    }
+                }
+            }
+            
+            // Generate cells (cubes - fix one axis)
+            cells = [];
+            for (let fixedAxis = 0; fixedAxis < 4; fixedAxis++) {
+                for (let fixedVal = 0; fixedVal <= 1; fixedVal++) {
+                    const cell = [];
+                    for (let i = 0; i < 16; i++) {
+                        const bit = (i >> fixedAxis) & 1;
+                        if (bit === fixedVal) {
+                            cell.push(i);
+                        }
+                    }
+                    cells.push(cell);
+                }
+            }
+            
+            updateStats();
+        }
+
+        function hammingDistance(a, b) {
+            let xor = a ^ b;
+            let count = 0;
+            while (xor > 0) {
+                count += xor & 1;
+                xor >>= 1;
+            }
+            return count;
+        }
+
+        // ===========================
+        // Topology Operations
+        // ===========================
+
+        function collapseRandomEdge() {
+            if (edges.length === 0) {
+                alert('No edges to collapse!');
+                return;
+            }
+            
+            const edgeIdx = Math.floor(Math.random() * edges.length);
+            const [i, j] = edges[edgeIdx];
+            
+            // Merge vertices
+            vertices[i] = [
+                (vertices[i][0] + vertices[j][0]) / 2,
+                (vertices[i][1] + vertices[j][1]) / 2,
+                (vertices[i][2] + vertices[j][2]) / 2,
+                (vertices[i][3] + vertices[j][3]) / 2
+            ];
+            vertices[j] = null;
+            
+            // Remap edges
+            const newEdges = [];
+            for (const [a, b] of edges) {
+                const a2 = a === j ? i : a;
+                const b2 = b === j ? i : b;
+                if (a2 !== b2 && vertices[a2] && vertices[b2]) {
+                    // Check for duplicates
+                    if (!newEdges.some(([x, y]) => (x === a2 && y === b2) || (x === b2 && y === a2))) {
+                        newEdges.push([a2, b2]);
+                    }
+                }
+            }
+            edges = newEdges;
+            
+            // Remap faces
+            faces = faces.map(face => 
+                face.map(v => v === j ? i : v).filter((v, idx, arr) => arr.indexOf(v) === idx)
+            ).filter(face => face.length >= 3 && face.every(v => vertices[v]));
+            
+            // Remap cells
+            cells = cells.map(cell => 
+                cell.map(v => v === j ? i : v).filter((v, idx, arr) => arr.indexOf(v) === idx)
+            ).filter(cell => cell.length >= 4 && cell.every(v => vertices[v]));
+            
+            compactVertices();
+            updateStats();
+        }
+
+        function subdivideRandomCell() {
+            if (cells.length === 0) {
+                alert('No cells to subdivide!');
+                return;
+            }
+            
+            const cellIdx = Math.floor(Math.random() * cells.length);
+            const cell = cells[cellIdx];
+            
+            // Calculate centroid
+            const centroid = [0, 0, 0, 0];
+            for (const vIdx of cell) {
+                if (vertices[vIdx]) {
+                    for (let d = 0; d < 4; d++) {
+                        centroid[d] += vertices[vIdx][d];
+                    }
+                }
+            }
+            for (let d = 0; d < 4; d++) {
+                centroid[d] /= cell.length;
+            }
+            
+            // Add centroid as new vertex
+            const newIdx = vertices.length;
+            vertices.push(centroid);
+            
+            // Add edges from centroid to cell vertices
+            for (const vIdx of cell) {
+                if (vertices[vIdx]) {
+                    edges.push([newIdx, vIdx]);
+                }
+            }
+            
+            // Create subcells (simplified: connect octants)
+            const subcells = [];
+            const octants = {};
+            for (const vIdx of cell) {
+                const v = vertices[vIdx];
+                const key = v.map((coord, d) => coord >= centroid[d] ? '1' : '0').join('');
+                if (!octants[key]) octants[key] = [];
+                octants[key].push(vIdx);
+            }
+            
+            for (const octant in octants) {
+                const subcell = [...octants[octant], newIdx];
+                if (subcell.length >= 4) {
+                    subcells.push(subcell);
+                }
+            }
+            
+            // Replace original cell with subcells
+            cells.splice(cellIdx, 1, ...subcells);
+            
+            updateStats();
+        }
+
+        function createDual() {
+            // Dual vertices = centroids of cells
+            const dualVertices = cells.map(cell => {
+                const centroid = [0, 0, 0, 0];
+                for (const vIdx of cell) {
+                    if (vertices[vIdx]) {
+                        for (let d = 0; d < 4; d++) {
+                            centroid[d] += vertices[vIdx][d];
+                        }
+                    }
+                }
+                for (let d = 0; d < 4; d++) {
+                    centroid[d] /= cell.length;
+                }
+                return centroid;
+            });
+            
+            // Dual edges = connect cells that share a face (4+ vertices)
+            const dualEdges = [];
+            for (let i = 0; i < cells.length; i++) {
+                for (let j = i + 1; j < cells.length; j++) {
+                    const intersection = cells[i].filter(v => cells[j].includes(v));
+                    if (intersection.length >= 4) {
+                        dualEdges.push([i, j]);
+                    }
+                }
+            }
+            
+            vertices = dualVertices;
+            edges = dualEdges;
+            faces = [];
+            
+            // Rebuild cells from edges (simple approach: each edge forms a connection)
+            cells = [];
+            
+            updateStats();
+        }
+
+        function rewireEdges() {
+            const newEdges = [];
+            const allVertices = vertices.map((v, i) => v ? i : null).filter(i => i !== null);
+            
+            for (const [a, b] of edges) {
+                if (Math.random() < rewireProb) {
+                    const candidate = allVertices[Math.floor(Math.random() * allVertices.length)];
+                    if (candidate !== a && candidate !== b) {
+                        newEdges.push([a, candidate]);
+                    } else {
+                        newEdges.push([a, b]);
+                    }
+                } else {
+                    newEdges.push([a, b]);
+                }
+            }
+            
+            // Remove duplicates
+            const uniqueEdges = [];
+            for (const [a, b] of newEdges) {
+                if (!uniqueEdges.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) {
+                    uniqueEdges.push([a, b]);
+                }
+            }
+            
+            edges = uniqueEdges;
+            updateStats();
+        }
+
+        function compactVertices() {
+            const oldToNew = {};
+            const newVertices = [];
+            
+            vertices.forEach((v, i) => {
+                if (v) {
+                    oldToNew[i] = newVertices.length;
+                    newVertices.push(v);
+                }
+            });
+            
+            vertices = newVertices;
+            edges = edges.map(([a, b]) => [oldToNew[a], oldToNew[b]])
+                        .filter(([a, b]) => a !== undefined && b !== undefined);
+            faces = faces.map(face => face.map(v => oldToNew[v]))
+                        .filter(face => face.every(v => v !== undefined));
+            cells = cells.map(cell => cell.map(v => oldToNew[v]))
+                        .filter(cell => cell.every(v => v !== undefined));
+        }
+
+        function resetTesseract() {
+            buildUnitTesseract([0, 0, 0, 0], 2.0);
+        }
+
+        // ===========================
+        // 4D to 3D Projection
+        // ===========================
+
+        function rotate4D(point, angle) {
+            // Rotate in XW plane
+            const [x, y, z, w] = point;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return [
+                x * cos - w * sin,
+                y,
+                z,
+                x * sin + w * cos
+            ];
+        }
+
+        function project4Dto3D(point4d) {
+            // Perspective projection from 4D to 3D
+            const distance = 4;
+            const w = point4d[3];
+            const scale = distance / (distance - w);
+            return [
+                point4d[0] * scale,
+                point4d[1] * scale,
+                point4d[2] * scale
+            ];
+        }
+
+        function rotateX(point, angle) {
+            const [x, y, z] = point;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return [x, y * cos - z * sin, y * sin + z * cos];
+        }
+
+        function rotateY(point, angle) {
+            const [x, y, z] = point;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return [x * cos + z * sin, y, -x * sin + z * cos];
+        }
+
+        function rotateZ(point, angle) {
+            const [x, y, z] = point;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            return [x * cos - y * sin, x * sin + y * cos, z];
+        }
+
+        function project(point3d) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            return [
+                centerX + point3d[0] * zoom,
+                centerY - point3d[1] * zoom
+            ];
+        }
+
+        // ===========================
+        // Rendering
+        // ===========================
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Transform vertices
+            const projected = vertices.map(v => {
+                if (!v) return null;
+                let p = rotate4D(v, angle4D);
+                p = project4Dto3D(p);
+                p = rotateX(p, angleX);
+                p = rotateY(p, angleY);
+                p = rotateZ(p, angleZ);
+                return project(p);
+            });
+            
+            // Draw edges
+            ctx.strokeStyle = `rgba(255, 255, 255, ${edgeOpacity})`;
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+            
+            for (const [i, j] of edges) {
+                if (projected[i] && projected[j]) {
+                    ctx.beginPath();
+                    ctx.moveTo(projected[i][0], projected[i][1]);
+                    ctx.lineTo(projected[j][0], projected[j][1]);
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw vertices
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'rgba(102, 126, 234, 0.8)';
+            ctx.fillStyle = '#ffffff';
+            
+            for (const p of projected) {
+                if (p) {
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Auto-rotate in 4D
+            angle4D += rotationSpeed;
+            
+            requestAnimationFrame(render);
+        }
+
+        // ===========================
+        // Interaction
+        // ===========================
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+                angleY += dx * 0.005;
+                angleX += dy * 0.005;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoom += e.deltaY * -0.1;
+            zoom = Math.max(50, Math.min(500, zoom));
+        });
+
+        // ===========================
+        // UI Updates
+        // ===========================
+
+        function updateStats() {
+            document.getElementById('vertexCount').textContent = vertices.filter(v => v).length;
+            document.getElementById('edgeCount').textContent = edges.length;
+            document.getElementById('faceCount').textContent = faces.length;
+            document.getElementById('cellCount').textContent = cells.length;
+        }
+
+        function updateRotationSpeed(value) {
+            rotationSpeed = parseFloat(value);
+            document.getElementById('rotationSpeedValue').textContent = value;
+        }
+
+        function updateEdgeOpacity(value) {
+            edgeOpacity = parseFloat(value);
+            document.getElementById('edgeOpacityValue').textContent = value;
+        }
+
+        function updateRewireProb(value) {
+            rewireProb = parseFloat(value);
+            document.getElementById('rewireProbValue').textContent = value;
+        }
+
+        // ===========================
+        // Initialize
+        // ===========================
+
+        buildUnitTesseract([0, 0, 0, 0], 2.0);
+        render();
+    </script>
+</body>
+</html>
+
