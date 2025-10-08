@@ -240,6 +240,7 @@
                     <option value="24-cell">24-Cell</option>
                     <option value="120-cell">120-Cell</option>
                     <option value="600-cell">600-Cell</option>
+                    <option value="fidget-spinner">🌀 4D Fidget Spinner</option>
                 </select>
                 <div id="polytopeInfo" style="font-size: 12px; color: #666; line-height: 1.6; background: #f8f9fa; padding: 10px; border-radius: 6px;">
                     The tesseract is the 4D analog of a cube. It has 8 cubic cells.
@@ -794,6 +795,179 @@
         }
 
         // ===========================
+        // 4D Fidget Spinner Construction
+        // ===========================
+
+        function build4DFidgetSpinner(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            edges = [];
+            faces = [];
+            cells = [];
+            
+            const r = size / 2;
+            const armLength = r * 1.5;
+            const armSegments = 3;
+            const endRadius = r * 0.5;
+            const endPoints = 8; // Points in the circular end of each arm
+            
+            // Central hub - a small tesseract
+            const hubSize = r * 0.3;
+            const hubVertices = [];
+            for (let w = 0; w <= 1; w++) {
+                for (let z = 0; z <= 1; z++) {
+                    for (let y = 0; y <= 1; y++) {
+                        for (let x = 0; x <= 1; x++) {
+                            const v = [
+                                (x === 0 ? -hubSize : hubSize) + center[0],
+                                (y === 0 ? -hubSize : hubSize) + center[1],
+                                (z === 0 ? -hubSize : hubSize) + center[2],
+                                (w === 0 ? -hubSize : hubSize) + center[3]
+                            ];
+                            vertices.push(v);
+                            hubVertices.push(vertices.length - 1);
+                        }
+                    }
+                }
+            }
+            
+            // Connect hub vertices
+            for (let i = 0; i < 16; i++) {
+                for (let j = i + 1; j < 16; j++) {
+                    if (hammingDistance(i, j) === 1) {
+                        edges.push([hubVertices[i], hubVertices[j]]);
+                    }
+                }
+            }
+            
+            // Create 8 arms extending along the main 4D axes (positive and negative)
+            const armDirections = [
+                [1, 0, 0, 0], [-1, 0, 0, 0],
+                [0, 1, 0, 0], [0, -1, 0, 0],
+                [0, 0, 1, 0], [0, 0, -1, 0],
+                [0, 0, 0, 1], [0, 0, 0, -1]
+            ];
+            
+            for (const dir of armDirections) {
+                const armVerts = [];
+                
+                // Find the closest hub vertex to this direction
+                let startVertex = hubVertices[0];
+                let maxDot = -Infinity;
+                for (const hvIdx of hubVertices) {
+                    const hv = vertices[hvIdx];
+                    let dot = 0;
+                    for (let d = 0; d < 4; d++) {
+                        dot += (hv[d] - center[d]) * dir[d];
+                    }
+                    if (dot > maxDot) {
+                        maxDot = dot;
+                        startVertex = hvIdx;
+                    }
+                }
+                armVerts.push(startVertex);
+                
+                // Create arm segments
+                for (let seg = 1; seg <= armSegments; seg++) {
+                    const t = seg / armSegments;
+                    const pos = [
+                        center[0] + dir[0] * armLength * t,
+                        center[1] + dir[1] * armLength * t,
+                        center[2] + dir[2] * armLength * t,
+                        center[3] + dir[3] * armLength * t
+                    ];
+                    vertices.push(pos);
+                    armVerts.push(vertices.length - 1);
+                    
+                    // Connect to previous segment
+                    if (seg > 0) {
+                        edges.push([armVerts[seg - 1], armVerts[seg]]);
+                    }
+                }
+                
+                // Create circular end cap at the tip of each arm
+                const tipIdx = armVerts[armVerts.length - 1];
+                const tipPos = vertices[tipIdx];
+                
+                // Find two orthogonal directions perpendicular to the arm direction
+                let perp1 = [0, 0, 0, 0];
+                let perp2 = [0, 0, 0, 0];
+                
+                // Find first perpendicular vector
+                if (Math.abs(dir[0]) < 0.9) {
+                    perp1 = [1, 0, 0, 0];
+                } else if (Math.abs(dir[1]) < 0.9) {
+                    perp1 = [0, 1, 0, 0];
+                } else if (Math.abs(dir[2]) < 0.9) {
+                    perp1 = [0, 0, 1, 0];
+                } else {
+                    perp1 = [0, 0, 0, 1];
+                }
+                
+                // Gram-Schmidt orthogonalization
+                let dot1 = 0;
+                for (let d = 0; d < 4; d++) dot1 += perp1[d] * dir[d];
+                for (let d = 0; d < 4; d++) perp1[d] -= dot1 * dir[d];
+                
+                // Normalize perp1
+                let len1 = 0;
+                for (let d = 0; d < 4; d++) len1 += perp1[d] * perp1[d];
+                len1 = Math.sqrt(len1);
+                for (let d = 0; d < 4; d++) perp1[d] /= len1;
+                
+                // Find second perpendicular vector
+                if (Math.abs(dir[1]) < 0.9 && Math.abs(perp1[1]) < 0.9) {
+                    perp2 = [0, 1, 0, 0];
+                } else if (Math.abs(dir[2]) < 0.9 && Math.abs(perp1[2]) < 0.9) {
+                    perp2 = [0, 0, 1, 0];
+                } else if (Math.abs(dir[3]) < 0.9 && Math.abs(perp1[3]) < 0.9) {
+                    perp2 = [0, 0, 0, 1];
+                } else {
+                    perp2 = [1, 0, 0, 0];
+                }
+                
+                // Orthogonalize against both dir and perp1
+                let dot2a = 0, dot2b = 0;
+                for (let d = 0; d < 4; d++) {
+                    dot2a += perp2[d] * dir[d];
+                    dot2b += perp2[d] * perp1[d];
+                }
+                for (let d = 0; d < 4; d++) {
+                    perp2[d] -= dot2a * dir[d] + dot2b * perp1[d];
+                }
+                
+                // Normalize perp2
+                let len2 = 0;
+                for (let d = 0; d < 4; d++) len2 += perp2[d] * perp2[d];
+                len2 = Math.sqrt(len2);
+                for (let d = 0; d < 4; d++) perp2[d] /= len2;
+                
+                // Create circle of points around the arm tip
+                const circleVerts = [];
+                for (let i = 0; i < endPoints; i++) {
+                    const angle = (i / endPoints) * 2 * Math.PI;
+                    const circlePos = [
+                        tipPos[0] + endRadius * (Math.cos(angle) * perp1[0] + Math.sin(angle) * perp2[0]),
+                        tipPos[1] + endRadius * (Math.cos(angle) * perp1[1] + Math.sin(angle) * perp2[1]),
+                        tipPos[2] + endRadius * (Math.cos(angle) * perp1[2] + Math.sin(angle) * perp2[2]),
+                        tipPos[3] + endRadius * (Math.cos(angle) * perp1[3] + Math.sin(angle) * perp2[3])
+                    ];
+                    vertices.push(circlePos);
+                    circleVerts.push(vertices.length - 1);
+                }
+                
+                // Connect circle vertices
+                for (let i = 0; i < endPoints; i++) {
+                    const next = (i + 1) % endPoints;
+                    edges.push([circleVerts[i], circleVerts[next]]);
+                    // Connect to tip
+                    edges.push([tipIdx, circleVerts[i]]);
+                }
+            }
+            
+            updateStats();
+        }
+
+        // ===========================
         // Topology Operations
         // ===========================
 
@@ -1006,7 +1180,8 @@
                 '16-cell': 'The 16-cell (hexadecachoron) is the 4D analog of an octahedron. It is dual to the tesseract.',
                 '24-cell': 'The 24-cell is unique to 4D with no 3D analog. It is self-dual and has 24 octahedral cells.',
                 '120-cell': 'The 120-cell has 120 dodecahedral cells. It is one of the most complex regular polytopes (simplified here for performance).',
-                '600-cell': 'The 600-cell has 600 tetrahedral cells. It is the 4D analog of an icosahedron.'
+                '600-cell': 'The 600-cell has 600 tetrahedral cells. It is the 4D analog of an icosahedron.',
+                'fidget-spinner': 'A 4D fidget spinner with a hypercubic central hub and 8 arms extending along each 4D axis direction, each with circular end caps!'
             };
             
             const viewTexts = {
@@ -1015,7 +1190,8 @@
                 '16-cell': '3D Projection of 4D 16-Cell',
                 '24-cell': '3D Projection of 4D 24-Cell',
                 '120-cell': '3D Projection of 4D 120-Cell',
-                '600-cell': '3D Projection of 4D 600-Cell'
+                '600-cell': '3D Projection of 4D 600-Cell',
+                'fidget-spinner': '3D Projection of 4D Fidget Spinner'
             };
             
             document.getElementById('polytopeInfo').textContent = infoTexts[type];
@@ -1039,6 +1215,9 @@
                     break;
                 case '600-cell':
                     build600Cell([0, 0, 0, 0], 2.0);
+                    break;
+                case 'fidget-spinner':
+                    build4DFidgetSpinner([0, 0, 0, 0], 2.0);
                     break;
             }
         }
