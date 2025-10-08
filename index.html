@@ -228,8 +228,25 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h1>🔮 Tesseract Topology</h1>
-            <p class="subtitle">Interactive 4D hypercube visualization with topology-changing operations</p>
+            <h1>🔮 4D Polytope Explorer</h1>
+            <p class="subtitle">Interactive 4D regular polytope visualization with topology-changing operations</p>
+
+            <div class="section">
+                <div class="section-title">Polytope Selection</div>
+                <select id="polytopeSelect" onchange="changePolytope(this.value)" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0; font-size: 14px; margin-bottom: 15px; background: white; cursor: pointer;">
+                    <option value="5-cell">5-Cell (Pentachoron)</option>
+                    <option value="8-cell" selected>8-Cell (Tesseract)</option>
+                    <option value="16-cell">16-Cell (Hexadecachoron)</option>
+                    <option value="24-cell">24-Cell</option>
+                    <option value="120-cell">120-Cell</option>
+                    <option value="600-cell">600-Cell</option>
+                </select>
+                <div id="polytopeInfo" style="font-size: 12px; color: #666; line-height: 1.6; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                    The tesseract is the 4D analog of a cube. It has 8 cubic cells.
+                </div>
+            </div>
+
+            <div class="divider"></div>
 
             <div class="section">
                 <div class="section-title">Statistics</div>
@@ -291,7 +308,7 @@
 
             <div class="section">
                 <button onclick="resetTesseract()" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                    🔄 Reset to Original
+                    🔄 Reset Current Polytope
                 </button>
             </div>
         </div>
@@ -299,7 +316,7 @@
         <div class="main-view">
             <canvas id="canvas"></canvas>
             <div class="info-overlay">
-                <strong>Current View:</strong> 3D Projection of 4D Tesseract
+                <strong>Current View:</strong> <span id="currentPolytopeView">3D Projection of 4D Tesseract</span>
             </div>
             <div class="rotate-hint">
                 🖱️ Click and drag to rotate • Scroll to zoom
@@ -425,6 +442,355 @@
                 xor >>= 1;
             }
             return count;
+        }
+
+        // ===========================
+        // 5-Cell (Pentachoron) Construction
+        // ===========================
+
+        function build5Cell(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            
+            // 5 vertices positioned as a 4D simplex
+            const r = size / Math.sqrt(10);
+            vertices = [
+                [r, r, r, -r/Math.sqrt(5)],
+                [r, -r, -r, -r/Math.sqrt(5)],
+                [-r, r, -r, -r/Math.sqrt(5)],
+                [-r, -r, r, -r/Math.sqrt(5)],
+                [0, 0, 0, 4*r/Math.sqrt(5)]
+            ];
+            
+            // Center the vertices
+            for (let i = 0; i < vertices.length; i++) {
+                for (let d = 0; d < 4; d++) {
+                    vertices[i][d] += center[d];
+                }
+            }
+            
+            // All pairs connected (complete graph)
+            edges = [];
+            for (let i = 0; i < 5; i++) {
+                for (let j = i + 1; j < 5; j++) {
+                    edges.push([i, j]);
+                }
+            }
+            
+            // 10 triangular faces
+            faces = [];
+            for (let i = 0; i < 5; i++) {
+                for (let j = i + 1; j < 5; j++) {
+                    for (let k = j + 1; k < 5; k++) {
+                        faces.push([i, j, k]);
+                    }
+                }
+            }
+            
+            // 5 tetrahedral cells (each missing one vertex)
+            cells = [];
+            for (let skip = 0; skip < 5; skip++) {
+                const cell = [];
+                for (let i = 0; i < 5; i++) {
+                    if (i !== skip) cell.push(i);
+                }
+                cells.push(cell);
+            }
+            
+            updateStats();
+        }
+
+        // ===========================
+        // 16-Cell (Hexadecachoron) Construction
+        // ===========================
+
+        function build16Cell(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            const r = size / 2;
+            
+            // 8 vertices at unit distances along each axis
+            vertices = [
+                [r, 0, 0, 0], [-r, 0, 0, 0],
+                [0, r, 0, 0], [0, -r, 0, 0],
+                [0, 0, r, 0], [0, 0, -r, 0],
+                [0, 0, 0, r], [0, 0, 0, -r]
+            ];
+            
+            // Center the vertices
+            for (let i = 0; i < vertices.length; i++) {
+                for (let d = 0; d < 4; d++) {
+                    vertices[i][d] += center[d];
+                }
+            }
+            
+            // Connect vertices at distance sqrt(2)
+            edges = [];
+            for (let i = 0; i < 8; i++) {
+                for (let j = i + 1; j < 8; j++) {
+                    let distSq = 0;
+                    for (let d = 0; d < 4; d++) {
+                        const diff = vertices[i][d] - vertices[j][d];
+                        distSq += diff * diff;
+                    }
+                    if (Math.abs(distSq - 2 * r * r) < 0.01) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+            
+            // 32 triangular faces
+            faces = [];
+            for (let i = 0; i < 8; i++) {
+                for (let j = i + 1; j < 8; j++) {
+                    for (let k = j + 1; k < 8; k++) {
+                        // Check if forms valid triangle
+                        const hasEdgeIJ = edges.some(([a, b]) => (a === i && b === j) || (a === j && b === i));
+                        const hasEdgeJK = edges.some(([a, b]) => (a === j && b === k) || (a === k && b === j));
+                        const hasEdgeIK = edges.some(([a, b]) => (a === i && b === k) || (a === k && b === i));
+                        if (hasEdgeIJ && hasEdgeJK && hasEdgeIK) {
+                            faces.push([i, j, k]);
+                        }
+                    }
+                }
+            }
+            
+            // 16 tetrahedral cells
+            cells = [];
+            for (let i = 0; i < 8; i++) {
+                for (let j = i + 1; j < 8; j++) {
+                    for (let k = j + 1; k < 8; k++) {
+                        for (let l = k + 1; l < 8; l++) {
+                            const quad = [i, j, k, l];
+                            // Check if forms valid tetrahedron (6 edges present)
+                            let edgeCount = 0;
+                            for (let a = 0; a < 4; a++) {
+                                for (let b = a + 1; b < 4; b++) {
+                                    if (edges.some(([x, y]) => 
+                                        (x === quad[a] && y === quad[b]) || 
+                                        (x === quad[b] && y === quad[a]))) {
+                                        edgeCount++;
+                                    }
+                                }
+                            }
+                            if (edgeCount === 6) {
+                                cells.push(quad);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            updateStats();
+        }
+
+        // ===========================
+        // 24-Cell Construction
+        // ===========================
+
+        function build24Cell(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            const r = size / 2;
+            
+            // 24 vertices: 8 at (±1,±1,0,0) permutations and 16 at (±1,0,0,0) permutations
+            // First 8: all permutations of (±r, ±r, 0, 0)
+            for (let s1 of [-1, 1]) {
+                for (let s2 of [-1, 1]) {
+                    vertices.push([s1*r, s2*r, 0, 0]);
+                    vertices.push([s1*r, 0, s2*r, 0]);
+                    vertices.push([s1*r, 0, 0, s2*r]);
+                    vertices.push([0, s1*r, s2*r, 0]);
+                    vertices.push([0, s1*r, 0, s2*r]);
+                    vertices.push([0, 0, s1*r, s2*r]);
+                }
+            }
+            
+            // Center the vertices
+            for (let i = 0; i < vertices.length; i++) {
+                for (let d = 0; d < 4; d++) {
+                    vertices[i][d] += center[d];
+                }
+            }
+            
+            // Connect vertices at distance sqrt(2)*r
+            edges = [];
+            const targetDist = Math.sqrt(2) * r;
+            for (let i = 0; i < 24; i++) {
+                for (let j = i + 1; j < 24; j++) {
+                    let distSq = 0;
+                    for (let d = 0; d < 4; d++) {
+                        const diff = vertices[i][d] - vertices[j][d];
+                        distSq += diff * diff;
+                    }
+                    if (Math.abs(Math.sqrt(distSq) - targetDist) < 0.1) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+            
+            // Simplified face and cell construction
+            faces = [];
+            cells = [];
+            
+            updateStats();
+        }
+
+        // ===========================
+        // 120-Cell Construction (Simplified)
+        // ===========================
+
+        function build120Cell(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            const phi = (1 + Math.sqrt(5)) / 2; // Golden ratio
+            const r = size / 4;
+            
+            // 600 vertices of the 120-cell - using a subset for performance
+            // Generate all permutations and sign combinations of specific coordinates
+            const coords = [
+                [1, 1, 1, 1],
+                [2, 0, 0, 0],
+                [phi, phi, phi, 1/phi],
+                [phi*phi, 1/phi, 1/phi, 1/phi],
+            ];
+            
+            for (const coord of coords) {
+                // All permutations and sign combinations (simplified subset)
+                for (let s1 of [-1, 1]) {
+                    for (let s2 of [-1, 1]) {
+                        for (let s3 of [-1, 1]) {
+                            for (let s4 of [-1, 1]) {
+                                vertices.push([
+                                    s1 * coord[0] * r,
+                                    s2 * coord[1] * r,
+                                    s3 * coord[2] * r,
+                                    s4 * coord[3] * r
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Center the vertices
+            for (let i = 0; i < vertices.length; i++) {
+                for (let d = 0; d < 4; d++) {
+                    vertices[i][d] += center[d];
+                }
+            }
+            
+            // Generate edges (connect nearby vertices)
+            edges = [];
+            const edgeThreshold = 1.5 * r;
+            for (let i = 0; i < vertices.length && i < 200; i++) { // Limit for performance
+                for (let j = i + 1; j < vertices.length && j < 200; j++) {
+                    let dist = 0;
+                    for (let d = 0; d < 4; d++) {
+                        const diff = vertices[i][d] - vertices[j][d];
+                        dist += diff * diff;
+                    }
+                    dist = Math.sqrt(dist);
+                    if (dist < edgeThreshold && dist > 0.1) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+            
+            faces = [];
+            cells = [];
+            
+            updateStats();
+        }
+
+        // ===========================
+        // 600-Cell Construction
+        // ===========================
+
+        function build600Cell(center = [0, 0, 0, 0], size = 2.0) {
+            vertices = [];
+            const r = size / 2;
+            const phi = (1 + Math.sqrt(5)) / 2; // Golden ratio
+            
+            // 120 vertices of the 600-cell
+            // 8 vertices: (±1, ±1, ±1, ±1)
+            for (let s1 of [-1, 1]) {
+                for (let s2 of [-1, 1]) {
+                    for (let s3 of [-1, 1]) {
+                        for (let s4 of [-1, 1]) {
+                            vertices.push([s1*r, s2*r, s3*r, s4*r]);
+                        }
+                    }
+                }
+            }
+            
+            // 16 vertices: (±2, 0, 0, 0) and permutations
+            for (let s of [-1, 1]) {
+                vertices.push([s*2*r, 0, 0, 0]);
+                vertices.push([0, s*2*r, 0, 0]);
+                vertices.push([0, 0, s*2*r, 0]);
+                vertices.push([0, 0, 0, s*2*r]);
+            }
+            
+            // 96 vertices: (±phi, ±1, ±1/phi, 0) and all permutations
+            const p1 = phi * r;
+            const p2 = r;
+            const p3 = r / phi;
+            const perms = [
+                [0, 1, 2, 3], [0, 1, 3, 2], [0, 2, 1, 3], [0, 2, 3, 1], [0, 3, 1, 2], [0, 3, 2, 1],
+                [1, 0, 2, 3], [1, 0, 3, 2], [1, 2, 0, 3], [1, 2, 3, 0], [1, 3, 0, 2], [1, 3, 2, 0],
+                [2, 0, 1, 3], [2, 0, 3, 1], [2, 1, 0, 3], [2, 1, 3, 0], [2, 3, 0, 1], [2, 3, 1, 0],
+                [3, 0, 1, 2], [3, 0, 2, 1], [3, 1, 0, 2], [3, 1, 2, 0], [3, 2, 0, 1], [3, 2, 1, 0]
+            ];
+            
+            for (let s1 of [-1, 1]) {
+                for (let s2 of [-1, 1]) {
+                    for (let s3 of [-1, 1]) {
+                        for (const perm of perms) {
+                            const v = [p1, p2, p3, 0];
+                            const permuted = [
+                                v[perm[0]] * (perm[0] === 0 ? s1 : perm[0] === 1 ? s2 : perm[0] === 2 ? s3 : 1),
+                                v[perm[1]] * (perm[1] === 0 ? s1 : perm[1] === 1 ? s2 : perm[1] === 2 ? s3 : 1),
+                                v[perm[2]] * (perm[2] === 0 ? s1 : perm[2] === 1 ? s2 : perm[2] === 2 ? s3 : 1),
+                                v[perm[3]]
+                            ];
+                            // Only add unique vertices
+                            if (!vertices.some(u => 
+                                Math.abs(u[0]-permuted[0])<0.01 && 
+                                Math.abs(u[1]-permuted[1])<0.01 && 
+                                Math.abs(u[2]-permuted[2])<0.01 && 
+                                Math.abs(u[3]-permuted[3])<0.01)) {
+                                vertices.push(permuted);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Center the vertices
+            for (let i = 0; i < vertices.length; i++) {
+                for (let d = 0; d < 4; d++) {
+                    vertices[i][d] += center[d];
+                }
+            }
+            
+            // Generate edges (connect vertices at distance 2r/phi)
+            edges = [];
+            const targetDist = 2 * r / phi;
+            for (let i = 0; i < vertices.length; i++) {
+                for (let j = i + 1; j < vertices.length; j++) {
+                    let dist = 0;
+                    for (let d = 0; d < 4; d++) {
+                        const diff = vertices[i][d] - vertices[j][d];
+                        dist += diff * diff;
+                    }
+                    dist = Math.sqrt(dist);
+                    if (Math.abs(dist - targetDist) < 0.3) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+            
+            faces = [];
+            cells = [];
+            
+            updateStats();
         }
 
         // ===========================
@@ -621,7 +987,60 @@
         }
 
         function resetTesseract() {
-            buildUnitTesseract([0, 0, 0, 0], 2.0);
+            const selected = document.getElementById('polytopeSelect').value;
+            changePolytope(selected);
+        }
+
+        // ===========================
+        // Polytope Switching
+        // ===========================
+
+        let currentPolytope = '8-cell';
+
+        function changePolytope(type) {
+            currentPolytope = type;
+            
+            const infoTexts = {
+                '5-cell': 'The 5-cell (pentachoron) is the 4D analog of a tetrahedron. It has 5 tetrahedral cells and is the simplest regular 4D polytope.',
+                '8-cell': 'The tesseract (8-cell) is the 4D analog of a cube. It has 8 cubic cells.',
+                '16-cell': 'The 16-cell (hexadecachoron) is the 4D analog of an octahedron. It is dual to the tesseract.',
+                '24-cell': 'The 24-cell is unique to 4D with no 3D analog. It is self-dual and has 24 octahedral cells.',
+                '120-cell': 'The 120-cell has 120 dodecahedral cells. It is one of the most complex regular polytopes (simplified here for performance).',
+                '600-cell': 'The 600-cell has 600 tetrahedral cells. It is the 4D analog of an icosahedron.'
+            };
+            
+            const viewTexts = {
+                '5-cell': '3D Projection of 4D 5-Cell',
+                '8-cell': '3D Projection of 4D Tesseract',
+                '16-cell': '3D Projection of 4D 16-Cell',
+                '24-cell': '3D Projection of 4D 24-Cell',
+                '120-cell': '3D Projection of 4D 120-Cell',
+                '600-cell': '3D Projection of 4D 600-Cell'
+            };
+            
+            document.getElementById('polytopeInfo').textContent = infoTexts[type];
+            document.getElementById('currentPolytopeView').textContent = viewTexts[type];
+            
+            switch(type) {
+                case '5-cell':
+                    build5Cell([0, 0, 0, 0], 2.0);
+                    break;
+                case '8-cell':
+                    buildUnitTesseract([0, 0, 0, 0], 2.0);
+                    break;
+                case '16-cell':
+                    build16Cell([0, 0, 0, 0], 2.0);
+                    break;
+                case '24-cell':
+                    build24Cell([0, 0, 0, 0], 2.0);
+                    break;
+                case '120-cell':
+                    build120Cell([0, 0, 0, 0], 2.0);
+                    break;
+                case '600-cell':
+                    build600Cell([0, 0, 0, 0], 2.0);
+                    break;
+            }
         }
 
         // ===========================
@@ -796,7 +1215,7 @@
         // Initialize
         // ===========================
 
-        buildUnitTesseract([0, 0, 0, 0], 2.0);
+        changePolytope('8-cell');
         render();
     </script>
 </body>
